@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="チーム勤怠">
+<meta name="theme-color" content="#1B3A6B">
+<title>チーム勤怠 2026</title>
+<style>
+:root{
+  --navy:#1B3A6B; --navy2:#2C4E8A; --gold:#C9A84C;
+  --bg:#F2F4F8; --card:#fff; --line:#DDE3EC; --gray:#6B7280;
+  --green:#1E9E5A; --red:#D14343; --orange:#E08A00; --purple:#7C5CBF; --blue:#2E6FD8;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,"Hiragino Sans","Yu Gothic",sans-serif;background:var(--bg);color:#1a1a1a;
+  padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+header{background:var(--navy);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
+  position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between}
+header h1{font-size:17px;font-weight:700}
+header .sub{font-size:11px;color:#AABDD4}
+.wrap{padding:12px;max-width:640px;margin:0 auto}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(20,40,80,.08)}
+h2{font-size:14px;color:var(--navy);margin-bottom:10px}
+/* タブバー */
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);
+  display:flex;z-index:30;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:none;border:none;padding:8px 0 6px;font-size:10px;color:var(--gray);cursor:pointer}
+nav button .ic{display:block;font-size:20px;margin-bottom:2px}
+nav button.on{color:var(--navy);font-weight:700}
+/* 日付ナビ */
+.datenav{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.datenav button{width:44px;height:44px;border:none;border-radius:12px;background:#fff;font-size:18px;
+  color:var(--navy);box-shadow:0 1px 3px rgba(20,40,80,.1);cursor:pointer}
+.datenav .dd{flex:1;text-align:center;background:#fff;border-radius:12px;padding:8px 4px;
+  box-shadow:0 1px 3px rgba(20,40,80,.1)}
+.datenav .dd .d1{font-size:16px;font-weight:700;color:var(--navy)}
+.datenav .dd .d2{font-size:11px;color:var(--gray)}
+.datenav .dd .d2.sat{color:var(--blue)} .datenav .dd .d2.sun{color:var(--red)}
+input[type=date]{position:absolute;opacity:0;pointer-events:none}
+/* 社員カード（入力） */
+.emp{background:#fff;border-radius:14px;padding:10px 12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(20,40,80,.08)}
+.emp .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.emp .nm{font-weight:700;font-size:14px}
+.emp .st{font-size:12px;color:var(--gray)}
+.seg{display:flex;gap:4px}
+.seg button{flex:1;height:40px;border:1px solid var(--line);border-radius:9px;background:#fff;
+  font-size:13px;font-weight:600;color:#444;cursor:pointer}
+.seg button.k出.on{background:var(--green);border-color:var(--green);color:#fff}
+.seg button.k有.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.seg button.k欠.on{background:var(--red);border-color:var(--red);color:#fff}
+.seg button.k遅.on{background:var(--orange);border-color:var(--orange);color:#fff}
+.seg button.k早.on{background:var(--purple);border-color:var(--purple);color:#fff}
+.seg button.k休.on{background:var(--gray);border-color:var(--gray);color:#fff}
+.det{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap}
+.det label{font-size:11px;color:var(--gray)}
+.det select{height:38px;border:1px solid var(--line);border-radius:9px;padding:0 6px;font-size:14px;background:#fff}
+.bento{height:38px;padding:0 14px;border:1px solid var(--line);border-radius:9px;background:#fff;
+  font-size:13px;font-weight:600;color:#888;cursor:pointer}
+.bento.on{background:var(--gold);border-color:var(--gold);color:#fff}
+.bulk{width:100%;height:44px;border:none;border-radius:12px;background:var(--navy2);color:#fff;
+  font-size:14px;font-weight:700;margin-bottom:12px;cursor:pointer}
+/* 月間表 */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{border:1px solid var(--line);padding:5px 4px;text-align:center}
+th{background:#E8ECF2;color:var(--navy);font-size:11px}
+td.sat{background:#EDF3FD} td.sun{background:#FDEDED}
+.m出{color:var(--green);font-weight:700} .m有{color:var(--blue);font-weight:700}
+.m欠{color:var(--red);font-weight:700} .m遅{color:var(--orange);font-weight:700}
+.m早{color:var(--purple);font-weight:700} .m休{color:#aaa}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+select.big{width:100%;height:44px;border:1px solid var(--line);border-radius:12px;padding:0 10px;
+  font-size:15px;background:#fff;margin-bottom:12px}
+.monthsel{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px;-webkit-overflow-scrolling:touch}
+.monthsel button{flex:0 0 auto;padding:8px 14px;border:1px solid var(--line);border-radius:20px;
+  background:#fff;font-size:13px;font-weight:600;color:#444;cursor:pointer;white-space:nowrap}
+.monthsel button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+/* 社員設定 */
+.emprow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.emprow .no{width:26px;font-size:12px;color:var(--gray);text-align:right}
+.emprow input{flex:1;height:42px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font-size:15px}
+.btn{width:100%;height:46px;border:none;border-radius:12px;background:var(--navy);color:#fff;
+  font-size:15px;font-weight:700;cursor:pointer;margin-top:4px}
+.btn.gld{background:var(--gold)}
+.btn.gry{background:#8b94a3}
+.note{font-size:11px;color:var(--gray);line-height:1.7;margin-top:8px}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:rgba(20,30,50,.92);
+  color:#fff;padding:10px 22px;border-radius:24px;font-size:13px;z-index:50;opacity:0;transition:opacity .25s;pointer-events:none}
+.toast.show{opacity:1}
+.view{display:none}.view.on{display:block}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>チーム勤怠管理</h1><div class="sub">2026年度（2026/4〜2027/3）</div></div>
+  <div class="sub" id="saveState">保存済み</div>
+</header>
+
+<div class="wrap">
+
+  <!-- ===== 入力 ===== -->
+  <div class="view on" id="v-input">
+    <div class="datenav">
+      <button onclick="moveDay(-1)">◀</button>
+      <div class="dd" onclick="dtp.showPicker?dtp.showPicker():dtp.click()">
+        <div class="d1" id="dLabel"></div><div class="d2" id="wLabel"></div>
+      </div>
+      <button onclick="moveDay(1)">▶</button>
+      <input type="date" id="dtp" min="2026-04-01" max="2027-03-31" onchange="setDate(this.value)">
+    </div>
+    <button class="bulk" onclick="bulkFill()">⚡ 未入力の全員を「出勤 8h」にする</button>
+    <div id="empList"></div>
+  </div>
+
+  <!-- ===== 月間表 ===== -->
+  <div class="view" id="v-month">
+    <div class="monthsel" id="msel1"></div>
+    <select class="big" id="empSel" onchange="renderMonth()"></select>
+    <div class="card"><div class="scroll" id="monthTbl"></div></div>
+  </div>
+
+  <!-- ===== 集計 ===== -->
+  <div class="view" id="v-sum">
+    <div class="monthsel" id="msel2"></div>
+    <div class="card">
+      <h2 id="sumTitle"></h2>
+      <div class="scroll" id="sumTbl"></div>
+    </div>
+    <div class="card">
+      <h2>年間集計</h2>
+      <div class="scroll" id="yearTbl"></div>
+    </div>
+    <button class="btn gld" onclick="exportCSV()">📄 表示中の月をCSV出力</button>
+    <button class="btn gry" style="margin-top:8px" onclick="exportYearCSV()">📄 年間集計をCSV出力</button>
+    <div class="note">CSVはExcelでそのまま開けます。「チーム勤怠 2026年.xlsx」への転記にご利用ください。</div>
+  </div>
+
+  <!-- ===== 社員 ===== -->
+  <div class="view" id="v-emp">
+    <div class="card">
+      <h2>社員マスタ（最大20名）</h2>
+      <div id="empEdit"></div>
+      <button class="btn" onclick="saveEmp()">社員名を保存</button>
+      <div class="note">空欄の社員は入力画面・集計に表示されません。</div>
+    </div>
+    <div class="card">
+      <h2>データ管理</h2>
+      <button class="btn gry" onclick="backup()">💾 バックアップ（JSON書き出し）</button>
+      <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restore(this)">
+      <button class="btn gry" style="margin-top:8px" onclick="restoreFile.click()">↩︎ バックアップから復元</button>
+      <div class="note">データはこの端末（ブラウザ）内に保存されます。機種変更前にバックアップを書き出してください。</div>
+    </div>
+  </div>
+</div>
+
+<nav>
+  <button class="on" data-v="input" onclick="tab('input')"><span class="ic">✏️</span>入力</button>
+  <button data-v="month" onclick="tab('month')"><span class="ic">📅</span>月間表</button>
+  <button data-v="sum" onclick="tab('sum')"><span class="ic">📊</span>集計</button>
+  <button data-v="emp" onclick="tab('emp')"><span class="ic">👥</span>社員</button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const KINDS=["出","有","欠","遅","早","休"];
+const WD=["日","月","火","水","木","金","土"];
+const MONTHS=[[2026,4],[2026,5],[2026,6],[2026,7],[2026,8],[2026,9],[2026,10],[2026,11],[2026,12],[2027,1],[2027,2],[2027,3]];
+const ymKey=(y,m)=>y+"-"+String(m).padStart(2,"0");
+const daysIn=(y,m)=>new Date(y,m,0).getDate();
+
+let employees=JSON.parse(localStorage.getItem("kt_emp")||"null")||
+  Array.from({length:20},(_,i)=>"社員"+String(i+1).padStart(2,"0"));
+let data=JSON.parse(localStorage.getItem("kt_data")||"{}");
+// data[ym][day][empIdx] = {k:区分, h:勤務h, b:弁当(1/0), z:残業h}
+
+let cur=new Date();
+if(cur<new Date(2026,3,1))cur=new Date(2026,3,1);
+if(cur>new Date(2027,2,31))cur=new Date(2027,2,31);
+let selMonth=ymKey(cur.getFullYear(),cur.getMonth()+1);
+let sumMonth=selMonth;
+
+const $=id=>document.getElementById(id);
+function save(){
+  localStorage.setItem("kt_emp",JSON.stringify(employees));
+  localStorage.setItem("kt_data",JSON.stringify(data));
+  $("saveState").textContent="保存済み "+new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"});
+}
+function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");
+  clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove("show"),1600);}
+function activeEmps(){return employees.map((n,i)=>({n:n.trim(),i})).filter(e=>e.n);}
+function getE(ym,d,i){return data[ym]?.[d]?.[i]||null;}
+function setE(ym,d,i,v){
+  if(!data[ym])data[ym]={};if(!data[ym][d])data[ym][d]={};
+  if(v)data[ym][d][i]=v;else delete data[ym][d][i];
+  save();
+}
+
+/* ---------- タブ ---------- */
+function tab(v){
+  document.querySelectorAll(".view").forEach(el=>el.classList.remove("on"));
+  $("v-"+v).classList.add("on");
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  if(v==="input")renderInput();
+  if(v==="month")renderMonth();
+  if(v==="sum")renderSum();
+  if(v==="emp")renderEmpEdit();
+  window.scrollTo(0,0);
+}
+
+/* ---------- 入力 ---------- */
+function fmtDate(d){return d.getFullYear()+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";}
+function moveDay(n){
+  const d=new Date(cur);d.setDate(d.getDate()+n);
+  if(d<new Date(2026,3,1)||d>new Date(2027,2,31))return;
+  cur=d;renderInput();
+}
+function setDate(v){if(!v)return;const[y,m,d]=v.split("-").map(Number);cur=new Date(y,m-1,d);renderInput();}
+
+function renderInput(){
+  const y=cur.getFullYear(),m=cur.getMonth()+1,d=cur.getDate(),w=cur.getDay();
+  const ym=ymKey(y,m);
+  $("dLabel").textContent=fmtDate(cur);
+  const wl=$("wLabel");wl.textContent="（"+WD[w]+"曜日）";
+  wl.className="d2"+(w===6?" sat":w===0?" sun":"");
+  $("dtp").value=ym+"-"+String(d).padStart(2,"0");
+
+  const list=$("empList");list.innerHTML="";
+  for(const e of activeEmps()){
+    const en=getE(ym,d,e.i)||{};
+    const card=document.createElement("div");card.className="emp";
+    const st=en.k?`${en.k}${en.h?" / "+en.h+"h":""}${en.b?" / 弁当○":""}${en.z?" / 残業"+en.z+"h":""}`:"未入力";
+    let seg="";
+    for(const k of KINDS)
+      seg+=`<button class="k${k}${en.k===k?" on":""}" onclick="tapKind(${e.i},'${k}')">${k}</button>`;
+    let det="";
+    if(en.k&&["出","遅","早"].includes(en.k)){
+      let hOpt="";for(let h=1;h<=8;h++)hOpt+=`<option ${en.h===h?"selected":""}>${h}</option>`;
+      let zOpt=`<option value="">なし</option>`;
+      for(let z=0.5;z<=10;z+=0.5)zOpt+=`<option ${en.z===z?"selected":""}>${z}</option>`;
+      det=`<div class="det">
+        <label>勤務</label><select onchange="setH(${e.i},this.value)">${hOpt}</select><label>h</label>
+        <button class="bento${en.b?" on":""}" onclick="tapBento(${e.i})">🍱 弁当${en.b?"○":"×"}</button>
+        <label>残業</label><select onchange="setZ(${e.i},this.value)">${zOpt}</select><label>h</label>
+      </div>`;
+    }
+    card.innerHTML=`<div class="top"><span class="nm">${e.n}</span><span class="st">${st}</span></div>
+      <div class="seg">${seg}</div>${det}`;
+    list.appendChild(card);
+  }
+}
+function tapKind(i,k){
+  const ym=ymKey(cur.getFullYear(),cur.getMonth()+1),d=cur.getDate();
+  const en=getE(ym,d,i);
+  if(en&&en.k===k){setE(ym,d,i,null);}          // 同じ区分を再タップで解除
+  else if(["出","遅","早"].includes(k)){
+    setE(ym,d,i,{k,h:(en&&en.h)||8,b:(en&&en.b)||0,z:(en&&en.z)||0});
+  }else{setE(ym,d,i,{k});}
+  renderInput();
+}
+function setH(i,v){const ym=ymKey(cur.getFullYear(),cur.getMonth()+1),d=cur.getDate();
+  const en=getE(ym,d,i);if(en){en.h=Number(v);setE(ym,d,i,en);renderInput();}}
+function setZ(i,v){const ym=ymKey(cur.getFullYear(),cur.getMonth()+1),d=cur.getDate();
+  const en=getE(ym,d,i);if(en){en.z=v?Number(v):0;setE(ym,d,i,en);renderInput();}}
+function tapBento(i){const ym=ymKey(cur.getFullYear(),cur.getMonth()+1),d=cur.getDate();
+  const en=getE(ym,d,i);if(en){en.b=en.b?0:1;setE(ym,d,i,en);renderInput();}}
+function bulkFill(){
+  const ym=ymKey(cur.getFullYear(),cur.getMonth()+1),d=cur.getDate();
+  let c=0;
+  for(const e of activeEmps())if(!getE(ym,d,e.i)){setE(ym,d,e.i,{k:"出",h:8,b:0,z:0});c++;}
+  renderInput();toast(c?c+"名を「出勤 8h」にしました":"全員入力済みです");
+}
+
+/* ---------- 月選択チップ ---------- */
+function renderMonthSel(elId,sel,cb){
+  const el=$(elId);el.innerHTML="";
+  for(const[y,m]of MONTHS){
+    const ym=ymKey(y,m);
+    const b=document.createElement("button");
+    b.textContent=m+"月";b.className=ym===sel?"on":"";
+    b.onclick=()=>cb(ym);
+    el.appendChild(b);
+  }
+}
+
+/* ---------- 月間表 ---------- */
+function renderMonth(){
+  renderMonthSel("msel1",selMonth,ym=>{selMonth=ym;renderMonth();});
+  const es=activeEmps(),sel=$("empSel");
+  const prev=sel.value;
+  sel.innerHTML=es.map(e=>`<option value="${e.i}">${e.n}</option>`).join("");
+  if(prev&&es.some(e=>String(e.i)===prev))sel.value=prev;
+  const i=Number(sel.value||es[0]?.i||0);
+  const[y,m]=selMonth.split("-").map(Number),n=daysIn(y,m);
+  let h1="<tr><th>日</th>",h2="<tr><th>曜</th>",r1="<tr><th>区分</th>",r2="<tr><th>勤務h</th>",r3="<tr><th>弁当</th>",r4="<tr><th>残業h</th>";
+  for(let d=1;d<=n;d++){
+    const w=new Date(y,m-1,d).getDay(),cls=w===6?' class="sat"':w===0?' class="sun"':'';
+    const en=getE(selMonth,d,i)||{};
+    h1+=`<th>${d}</th>`;h2+=`<td${cls}>${WD[w]}</td>`;
+    r1+=`<td${cls}><span class="m${en.k||''}">${en.k||""}</span></td>`;
+    r2+=`<td${cls}>${en.h||""}</td>`;
+    r3+=`<td${cls}>${en.b?"○":""}</td>`;
+    r4+=`<td${cls}>${en.z||""}</td>`;
+  }
+  $("monthTbl").innerHTML=`<table>${h1}</tr>${h2}</tr>${r1}</tr>${r2}</tr>${r3}</tr>${r4}</tr></table>`;
+}
+
+/* ---------- 集計 ---------- */
+function calcMonth(ym,i){
+  const s={出:0,有:0,欠:0,遅:0,早:0,休:0,h:0,b:0,z:0};
+  const[y,m]=ym.split("-").map(Number),n=daysIn(y,m);
+  for(let d=1;d<=n;d++){const en=getE(ym,d,i);if(!en)continue;
+    if(s[en.k]!==undefined)s[en.k]++;
+    s.h+=en.h||0;s.b+=en.b?1:0;s.z+=en.z||0;}
+  return s;
+}
+function renderSum(){
+  renderMonthSel("msel2",sumMonth,ym=>{sumMonth=ym;renderSum();});
+  const[y,m]=sumMonth.split("-").map(Number);
+  $("sumTitle").textContent=y+"年"+m+"月 集計";
+  let html=`<table><tr><th>氏名</th><th>出勤</th><th>有給</th><th>欠勤</th><th>遅刻</th><th>早退</th><th>勤務h</th><th>弁当</th><th>残業h</th></tr>`;
+  const tot={出:0,有:0,欠:0,遅:0,早:0,h:0,b:0,z:0};
+  for(const e of activeEmps()){
+    const s=calcMonth(sumMonth,e.i);
+    for(const k of["出","有","欠","遅","早"])tot[k]+=s[k];
+    tot.h+=s.h;tot.b+=s.b;tot.z+=s.z;
+    html+=`<tr><td style="text-align:left">${e.n}</td><td>${s.出}</td><td>${s.有}</td><td>${s.欠}</td><td>${s.遅}</td><td>${s.早}</td><td>${s.h}</td><td>${s.b}</td><td>${s.z}</td></tr>`;
+  }
+  html+=`<tr style="font-weight:700;background:#F5EFDD"><td>合計</td><td>${tot.出}</td><td>${tot.有}</td><td>${tot.欠}</td><td>${tot.遅}</td><td>${tot.早}</td><td>${tot.h}</td><td>${tot.b}</td><td>${tot.z}</td></tr></table>`;
+  $("sumTbl").innerHTML=html;
+
+  let yh=`<table><tr><th>氏名</th><th>出勤</th><th>有給</th><th>欠勤</th><th>遅刻</th><th>早退</th><th>勤務h</th><th>弁当</th><th>残業h</th></tr>`;
+  for(const e of activeEmps()){
+    const t={出:0,有:0,欠:0,遅:0,早:0,h:0,b:0,z:0};
+    for(const[yy,mm]of MONTHS){const s=calcMonth(ymKey(yy,mm),e.i);
+      for(const k of["出","有","欠","遅","早"])t[k]+=s[k];t.h+=s.h;t.b+=s.b;t.z+=s.z;}
+    yh+=`<tr><td style="text-align:left">${e.n}</td><td>${t.出}</td><td>${t.有}</td><td>${t.欠}</td><td>${t.遅}</td><td>${t.早}</td><td>${t.h}</td><td>${t.b}</td><td>${t.z}</td></tr>`;
+  }
+  $("yearTbl").innerHTML=yh+"</table>";
+}
+
+/* ---------- CSV ---------- */
+function dl(name,text){
+  const blob=new Blob(["﻿"+text],{type:"text/csv"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();
+  URL.revokeObjectURL(a.href);
+}
+function exportCSV(){
+  const[y,m]=sumMonth.split("-").map(Number),n=daysIn(y,m);
+  let rows=[];
+  let head=["No.","氏名"];for(let d=1;d<=n;d++)head.push(d+"日");
+  head.push("出勤","有給","欠勤","遅刻","早退","勤務h","弁当","残業h");
+  rows.push(head);
+  for(const e of activeEmps()){
+    const s=calcMonth(sumMonth,e.i);
+    const r=[e.i+1,e.n];
+    for(let d=1;d<=n;d++){const en=getE(sumMonth,d,e.i);r.push(en?en.k:"");}
+    r.push(s.出,s.有,s.欠,s.遅,s.早,s.h,s.b,s.z);
+    rows.push(r);
+    const r2=["","勤務h"];for(let d=1;d<=n;d++){const en=getE(sumMonth,d,e.i);r2.push(en&&en.h?en.h:"");}
+    rows.push(r2);
+    const r3=["","残業h"];for(let d=1;d<=n;d++){const en=getE(sumMonth,d,e.i);r3.push(en&&en.z?en.z:"");}
+    rows.push(r3);
+    const r4=["","弁当"];for(let d=1;d<=n;d++){const en=getE(sumMonth,d,e.i);r4.push(en&&en.b?"○":"");}
+    rows.push(r4);
+  }
+  dl(`勤怠_${y}年${m}月.csv`,rows.map(r=>r.join(",")).join("\n"));
+  toast(m+"月のCSVを書き出しました");
+}
+function exportYearCSV(){
+  let rows=[["氏名","月","出勤","有給","欠勤","遅刻","早退","勤務h","弁当","残業h"]];
+  for(const e of activeEmps())
+    for(const[y,m]of MONTHS){const s=calcMonth(ymKey(y,m),e.i);
+      rows.push([e.n,y+"/"+m,s.出,s.有,s.欠,s.遅,s.早,s.h,s.b,s.z]);}
+  dl("勤怠_2026年度_年間.csv",rows.map(r=>r.join(",")).join("\n"));
+  toast("年間CSVを書き出しました");
+}
+
+/* ---------- 社員設定 ---------- */
+function renderEmpEdit(){
+  const el=$("empEdit");el.innerHTML="";
+  employees.forEach((n,i)=>{
+    const row=document.createElement("div");row.className="emprow";
+    row.innerHTML=`<span class="no">${i+1}</span><input value="${n.replace(/"/g,"&quot;")}" placeholder="（未使用）" data-i="${i}">`;
+    el.appendChild(row);
+  });
+}
+function saveEmp(){
+  document.querySelectorAll("#empEdit input").forEach(inp=>{employees[Number(inp.dataset.i)]=inp.value;});
+  save();toast("社員名を保存しました");
+}
+
+/* ---------- バックアップ ---------- */
+function backup(){
+  const blob=new Blob([JSON.stringify({emp:employees,data})],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download="勤怠バックアップ_"+new Date().toISOString().slice(0,10)+".json";a.click();
+  URL.revokeObjectURL(a.href);toast("バックアップを書き出しました");
+}
+function restore(inp){
+  const f=inp.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{try{
+    const o=JSON.parse(rd.result);
+    if(!Array.isArray(o.emp)||typeof o.data!=="object")throw 0;
+    employees=o.emp;data=o.data;save();toast("復元しました");tab("input");
+  }catch(e){toast("ファイルを読み込めませんでした");}};
+  rd.readAsText(f);inp.value="";
+}
+
+renderInput();
+</script>
+</body>
+</html>
