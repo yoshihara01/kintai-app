@@ -94,7 +94,7 @@ select.big{width:100%;height:44px;border:1px solid var(--line);border-radius:12p
 </head>
 <body>
 <header>
-  <div><h1>チーム勤怠管理</h1><div class="sub">2026年度（2026/4〜2027/3）</div></div>
+  <div><h1>チーム勤怠管理</h1><div class="sub">2026年度・20日締め（3/21〜翌3/20）</div></div>
   <div class="sub" id="saveState">保存済み</div>
 </header>
 
@@ -108,7 +108,7 @@ select.big{width:100%;height:44px;border:1px solid var(--line);border-radius:12p
         <div class="d1" id="dLabel"></div><div class="d2" id="wLabel"></div>
       </div>
       <button onclick="moveDay(1)">▶</button>
-      <input type="date" id="dtp" min="2026-04-01" max="2027-03-31" onchange="setDate(this.value)">
+      <input type="date" id="dtp" min="2026-03-21" max="2027-03-20" onchange="setDate(this.value)">
     </div>
     <button class="bulk" onclick="bulkFill()">⚡ 未入力の全員を「出勤 8h」にする</button>
     <div id="empList"></div>
@@ -170,6 +170,19 @@ const WD=["日","月","火","水","木","金","土"];
 const MONTHS=[[2026,4],[2026,5],[2026,6],[2026,7],[2026,8],[2026,9],[2026,10],[2026,11],[2026,12],[2027,1],[2027,2],[2027,3]];
 const ymKey=(y,m)=>y+"-"+String(m).padStart(2,"0");
 const daysIn=(y,m)=>new Date(y,m,0).getDate();
+// 20日締め：(y,m)月度 ＝ 前月21日〜当月20日
+function periodDays(y,m){
+  const days=[];
+  let py=y,pm=m-1;if(pm===0){pm=12;py--;}
+  const pn=daysIn(py,pm);
+  for(let d=21;d<=pn;d++)days.push({y:py,m:pm,d});
+  for(let d=1;d<=20;d++)days.push({y,m,d});
+  return days;
+}
+function periodLabel(y,m){
+  let py=y,pm=m-1;if(pm===0){pm=12;py--;}
+  return `${pm}/21〜${m}/20`;
+}
 
 let employees=JSON.parse(localStorage.getItem("kt_emp")||"null")||
   Array.from({length:20},(_,i)=>"社員"+String(i+1).padStart(2,"0"));
@@ -177,9 +190,15 @@ let data=JSON.parse(localStorage.getItem("kt_data")||"{}");
 // data[ym][day][empIdx] = {k:区分, h:勤務h, b:弁当(1/0), z:残業h}
 
 let cur=new Date();
-if(cur<new Date(2026,3,1))cur=new Date(2026,3,1);
-if(cur>new Date(2027,2,31))cur=new Date(2027,2,31);
-let selMonth=ymKey(cur.getFullYear(),cur.getMonth()+1);
+if(cur<new Date(2026,2,21))cur=new Date(2026,2,21);
+if(cur>new Date(2027,2,20))cur=new Date(2027,2,20);
+// 日付が属する「月度」を求める（21日以降は翌月度）
+function periodOf(d){
+  let y=d.getFullYear(),m=d.getMonth()+1;
+  if(d.getDate()>=21){m++;if(m===13){m=1;y++;}}
+  return ymKey(y,m);
+}
+let selMonth=periodOf(cur);
 let sumMonth=selMonth;
 
 const $=id=>document.getElementById(id);
@@ -214,7 +233,7 @@ function tab(v){
 function fmtDate(d){return d.getFullYear()+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";}
 function moveDay(n){
   const d=new Date(cur);d.setDate(d.getDate()+n);
-  if(d<new Date(2026,3,1)||d>new Date(2027,2,31))return;
+  if(d<new Date(2026,2,21)||d>new Date(2027,2,20))return;
   cur=d;renderInput();
 }
 function setDate(v){if(!v)return;const[y,m,d]=v.split("-").map(Number);cur=new Date(y,m-1,d);renderInput();}
@@ -279,7 +298,7 @@ function renderMonthSel(elId,sel,cb){
   for(const[y,m]of MONTHS){
     const ym=ymKey(y,m);
     const b=document.createElement("button");
-    b.textContent=m+"月";b.className=ym===sel?"on":"";
+    b.textContent=m+"月度";b.className=ym===sel?"on":"";
     b.onclick=()=>cb(ym);
     el.appendChild(b);
   }
@@ -293,25 +312,25 @@ function renderMonth(){
   sel.innerHTML=es.map(e=>`<option value="${e.i}">${e.n}</option>`).join("");
   if(prev&&es.some(e=>String(e.i)===prev))sel.value=prev;
   const i=Number(sel.value||es[0]?.i||0);
-  const[y,m]=selMonth.split("-").map(Number),n=daysIn(y,m);
+  const[y,m]=selMonth.split("-").map(Number);
   let h1="<tr><th>日</th>",h2="<tr><th>曜</th>",r1="<tr><th>区分</th>",r2="<tr><th>勤務h</th>",r3="<tr><th>弁当</th>",r4="<tr><th>残業h</th>";
-  for(let d=1;d<=n;d++){
-    const w=new Date(y,m-1,d).getDay(),cls=w===6?' class="sat"':w===0?' class="sun"':'';
-    const en=getE(selMonth,d,i)||{};
-    h1+=`<th>${d}</th>`;h2+=`<td${cls}>${WD[w]}</td>`;
+  for(const dd of periodDays(y,m)){
+    const w=new Date(dd.y,dd.m-1,dd.d).getDay(),cls=w===6?' class="sat"':w===0?' class="sun"':'';
+    const en=getE(ymKey(dd.y,dd.m),dd.d,i)||{};
+    h1+=`<th>${dd.d===21||dd.d===1?dd.m+"/"+dd.d:dd.d}</th>`;h2+=`<td${cls}>${WD[w]}</td>`;
     r1+=`<td${cls}><span class="m${en.k||''}">${en.k||""}</span></td>`;
     r2+=`<td${cls}>${en.h||""}</td>`;
     r3+=`<td${cls}>${en.b?"○":""}</td>`;
     r4+=`<td${cls}>${en.z||""}</td>`;
   }
-  $("monthTbl").innerHTML=`<table>${h1}</tr>${h2}</tr>${r1}</tr>${r2}</tr>${r3}</tr>${r4}</tr></table>`;
+  $("monthTbl").innerHTML=`<div style="font-size:11px;color:var(--gray);margin-bottom:6px">${m}月度（${periodLabel(y,m)}）</div><table>${h1}</tr>${h2}</tr>${r1}</tr>${r2}</tr>${r3}</tr>${r4}</tr></table>`;
 }
 
 /* ---------- 集計 ---------- */
 function calcMonth(ym,i){
   const s={出:0,有:0,欠:0,遅:0,早:0,休:0,h:0,b:0,z:0};
-  const[y,m]=ym.split("-").map(Number),n=daysIn(y,m);
-  for(let d=1;d<=n;d++){const en=getE(ym,d,i);if(!en)continue;
+  const[y,m]=ym.split("-").map(Number);
+  for(const dd of periodDays(y,m)){const en=getE(ymKey(dd.y,dd.m),dd.d,i);if(!en)continue;
     if(s[en.k]!==undefined)s[en.k]++;
     s.h+=en.h||0;s.b+=en.b?1:0;s.z+=en.z||0;}
   return s;
@@ -319,7 +338,7 @@ function calcMonth(ym,i){
 function renderSum(){
   renderMonthSel("msel2",sumMonth,ym=>{sumMonth=ym;renderSum();});
   const[y,m]=sumMonth.split("-").map(Number);
-  $("sumTitle").textContent=y+"年"+m+"月 集計";
+  $("sumTitle").textContent=y+"年"+m+"月度 集計（"+periodLabel(y,m)+"）";
   let html=`<table><tr><th>氏名</th><th>出勤</th><th>有給</th><th>欠勤</th><th>遅刻</th><th>早退</th><th>勤務h</th><th>弁当</th><th>残業h</th></tr>`;
   const tot={出:0,有:0,欠:0,遅:0,早:0,h:0,b:0,z:0};
   for(const e of activeEmps()){
@@ -348,26 +367,28 @@ function dl(name,text){
   URL.revokeObjectURL(a.href);
 }
 function exportCSV(){
-  const[y,m]=sumMonth.split("-").map(Number),n=daysIn(y,m);
+  const[y,m]=sumMonth.split("-").map(Number);
+  const pds=periodDays(y,m);
+  const cell=(dd,e,fn)=>{const en=getE(ymKey(dd.y,dd.m),dd.d,e.i);return fn(en);};
   let rows=[];
-  let head=["No.","氏名"];for(let d=1;d<=n;d++)head.push(d+"日");
+  let head=["No.","氏名"];for(const dd of pds)head.push(dd.m+"/"+dd.d);
   head.push("出勤","有給","欠勤","遅刻","早退","勤務h","弁当","残業h");
   rows.push(head);
   for(const e of activeEmps()){
     const s=calcMonth(sumMonth,e.i);
     const r=[e.i+1,e.n];
-    for(let d=1;d<=n;d++){const en=getE(sumMonth,d,e.i);r.push(en?en.k:"");}
+    for(const dd of pds)r.push(cell(dd,e,en=>en?en.k:""));
     r.push(s.出,s.有,s.欠,s.遅,s.早,s.h,s.b,s.z);
     rows.push(r);
-    const r2=["","勤務h"];for(let d=1;d<=n;d++){const en=getE(sumMonth,d,e.i);r2.push(en&&en.h?en.h:"");}
+    const r2=["","勤務h"];for(const dd of pds)r2.push(cell(dd,e,en=>en&&en.h?en.h:""));
     rows.push(r2);
-    const r3=["","残業h"];for(let d=1;d<=n;d++){const en=getE(sumMonth,d,e.i);r3.push(en&&en.z?en.z:"");}
+    const r3=["","残業h"];for(const dd of pds)r3.push(cell(dd,e,en=>en&&en.z?en.z:""));
     rows.push(r3);
-    const r4=["","弁当"];for(let d=1;d<=n;d++){const en=getE(sumMonth,d,e.i);r4.push(en&&en.b?"○":"");}
+    const r4=["","弁当"];for(const dd of pds)r4.push(cell(dd,e,en=>en&&en.b?"○":""));
     rows.push(r4);
   }
-  dl(`勤怠_${y}年${m}月.csv`,rows.map(r=>r.join(",")).join("\n"));
-  toast(m+"月のCSVを書き出しました");
+  dl(`勤怠_${y}年${m}月度.csv`,rows.map(r=>r.join(",")).join("\n"));
+  toast(m+"月度のCSVを書き出しました");
 }
 function exportYearCSV(){
   let rows=[["氏名","月","出勤","有給","欠勤","遅刻","早退","勤務h","弁当","残業h"]];
